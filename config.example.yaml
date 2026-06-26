@@ -1,0 +1,102 @@
+﻿datasources:
+  his1:
+    type: oracle
+    host: ${HIS1_HOST}
+    port: ${HIS1_PORT}
+    service_name: ${HIS1_SERVICE_NAME}
+    username: ${HIS1_USERNAME}
+    password: ${HIS1_PASSWORD}
+    mode: ${ORACLE_CLIENT_MODE}
+    client_lib_dir: ${ORACLE_CLIENT_LIB_DIR}
+  his1r:
+    type: oracle
+    host: ${HIS1R_HOST}
+    port: ${HIS1R_PORT}
+    service_name: ${HIS1R_SERVICE_NAME}
+    username: ${HIS1R_USERNAME}
+    password: ${HIS1R_PASSWORD}
+    mode: ${ORACLE_CLIENT_MODE}
+    client_lib_dir: ${ORACLE_CLIENT_LIB_DIR}
+  lis:
+    type: oracle
+    host: ${LIS_HOST}
+    port: ${LIS_PORT}
+    service_name: ${LIS_SERVICE_NAME}
+    username: ${LIS_USERNAME}
+    password: ${LIS_PASSWORD}
+    mode: ${ORACLE_CLIENT_MODE}
+    client_lib_dir: ${ORACLE_CLIENT_LIB_DIR}
+  ris:
+    type: oracle
+    host: ${RIS_DB_HOST}
+    port: ${RIS_DB_PORT}
+    service_name: ${RIS_DB_SERVICE_NAME}
+    username: ${RIS_DB_USER}
+    password: ${RIS_DB_PASSWORD}
+    thick_mode: true
+    client_lib_dir: ${ORACLE_CLIENT_LIB_DIR}
+
+extract:
+  default_start_date: "20240301"
+  default_end_date: "20240303"
+  batch_size: 1000
+  default_max_days_without_force: 31
+
+tables:
+  his:
+    patient_table: "jk_wsb.brjbxx"
+    diagnosis_table: "jk_wsb.brzdqk"
+    patient_key: "brxh"
+    discharge_date_field: "cyrq"
+
+lis_discovery:
+  excluded_owners:
+    - SYS
+    - SYSTEM
+    - XDB
+    - MDSYS
+    - CTXSYS
+    - ORDSYS
+    - DBSNMP
+  table_keywords:
+    - LIS
+    - RESULT
+    - REPORT
+    - TEST
+    - SAMPLE
+    - ITEM
+    - INSPECTION
+    - CHECK
+    - LAB
+    - JY
+    - JYBG
+    - JYMX
+    - JYJG
+  column_keywords:
+    - PATIENT
+    - PAT
+    - BR
+    - BRID
+    - BRXH
+    - ZYH
+    - MZH
+    - XM
+    - NAME
+    - SEX
+    - AGE
+    - ITEM
+    - TEST
+    - RESULT
+    - VALUE
+    - UNIT
+    - RANGE
+    - FLAG
+    - REPORT
+    - SAMPLE
+    - TIME
+    - DATE
+
+paths:
+  output_dir: ${OUTPUT_DIR}
+  log_dir: ${LOG_DIR}
+
