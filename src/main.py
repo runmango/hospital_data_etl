@@ -15,6 +15,7 @@ from .exporters.csv_exporter import export_dataframe_to_csv
 from .exporters.excel_exporter import export_dataframes_to_excel
 from .extractors.his import extract_patient_diagnosis_bundle
 from .extractors.lis import discover_lis_tables, inspect_lis_table
+from .extractors.ris import extract_ris_dimage
 from .extractors.metadata import (
     DEFAULT_EXCLUDED_OWNERS,
     extract_table_columns,
@@ -24,7 +25,6 @@ from .extractors.metadata import (
 )
 from .oracle_client import OracleClient, OracleClientError
 from .utils.logger import setup_logger
-from .utils.secret_redactor import short_sha256
 from .validators import validate_date_range
 
 
@@ -90,8 +90,7 @@ def command_test_connection(args) -> int:
         "host": datasource.host,
         "port": datasource.port,
         "service_name": datasource.service_name,
-        "username_set": bool(datasource.username),
-        "username_digest": short_sha256(datasource.username) if datasource.username else "",
+        "username": datasource.username,
         "connected": True,
         "tested_at": datetime.now().isoformat(timespec="seconds"),
     }
@@ -352,6 +351,29 @@ def command_inspect_lis_table(args) -> int:
     return 0
 
 
+
+def command_export_ris_dimage(args) -> int:
+    config = load_config()
+    logger = setup_logger(config.log_dir)
+    datasource = config.get_datasource_config(args.source)
+    if datasource.name != "ris":
+        raise ValueError("export-ris-dimage currently supports only the ris datasource")
+    limit = _validate_positive_limit(args.limit, maximum=100000)
+    output_path = Path(args.output)
+    if not output_path.is_absolute():
+        output_path = config.output_dir / output_path if len(output_path.parts) == 1 else Path(output_path)
+
+    logger.info("Exporting RIS_DIMAGE: source=%s, limit=%s", datasource.name, limit)
+    with _build_client(config, args.source, logger) as client:
+        dataframe = extract_ris_dimage(client, limit=limit)
+
+    exported_path = export_dataframe_to_csv(dataframe, output_path)
+    logger.info("RIS_DIMAGE CSV exported: rows=%s -> %s", len(dataframe), exported_path)
+    print("Preview (first 10 rows):")
+    _print_dataframe(dataframe.head(10), max_rows=10)
+    print(f"RIS_DIMAGE CSV exported: rows={len(dataframe)} -> {exported_path}")
+    return 0
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m src.main",
@@ -399,6 +421,12 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_lis_parser.add_argument("--sample-limit", type=int, default=10, help="Sample row limit, max 100.")
     inspect_lis_parser.set_defaults(func=command_inspect_lis_table)
 
+    export_ris_parser = subparsers.add_parser("export-ris-dimage", help="Export JK_WSB.RIS_DIMAGE image path rows to CSV.")
+    export_ris_parser.add_argument("--source", default="ris", choices=["ris"], help="RIS datasource name.")
+    export_ris_parser.add_argument("--limit", type=int, default=1000, help="Maximum rows to export.")
+    export_ris_parser.add_argument("--output", default="outputs/ris_dimage.csv", help="Output CSV path.")
+    export_ris_parser.set_defaults(func=command_export_ris_dimage)
+
     return parser
 
 
@@ -419,5 +447,8 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+
 
 

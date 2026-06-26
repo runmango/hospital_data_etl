@@ -400,36 +400,19 @@ python -m src.main inspect-lis-table --owner LIS_OWNER --table TABLE_NAME --samp
 - 不要在日志或聊天窗口粘贴整行患者数据。
 - 正式科研数据集必须做脱敏、权限控制和审计。
 
-## 敏感信息安全
 
-真实数据库密码只能放在本机 `.env` 或系统环境变量中，不能写入代码、README、`config.example.yaml`、`.env.example`、日志、JSON summary、CSV 或 Excel。
+## RIS_DIMAGE 影像路径导出
 
-- `.env` 不允许提交到 Git。
-- `config.example.yaml` 和 `.env.example` 只能写 `please_change_me`、`${ENV_NAME}` 或 `<redacted>` 这类占位符。
-- `logs/` 和 `outputs/` 可能包含患者隐私或运行细节，不允许提交到 Git，不要上传公网。
-- 日志会自动调用敏感信息脱敏逻辑，隐藏 password、token、secret、Authorization bearer 和带用户名密码的 Oracle 连接串。
-- 数据库 PASSWORD 不能用哈希替代，因为 Oracle 连接需要真实密码。
-- 哈希或 HMAC 只用于展示摘要、患者 ID / 身份证号匿名化、配置变化校验，不能用于还原数据库密码。
-- 患者 ID、身份证号等需要稳定匿名化时使用 `HMAC_SECRET` 驱动的 HMAC-SHA256，不使用普通 SHA256。
-
-提交代码前推荐运行：
+`JK_WSB.RIS_DIMAGE` 是 RIS 影像路径表/视图，第一版只导出路径相关字段，不导出患者姓名、身份证、电话、地址等隐私字段。
 
 ```bash
-python -m compileall src
-python scripts/scan_secrets.py
-python scripts/sanitize_examples.py --check
+python -m src.main export-ris-dimage --limit 1000 --output outputs/ris_dimage_sample.csv
 ```
 
-如需自动清洗示例文件中的疑似真实 secret，可先查看：
+输出 CSV 使用 `utf-8-sig` 编码，表头为：
 
-```bash
-python scripts/sanitize_examples.py --check
+```text
+影像记录ID,影像序列号,存储根路径,详细路径,图像文件名,完整影像路径
 ```
 
-确认后再执行：
-
-```bash
-python scripts/sanitize_examples.py --apply
-```
-
-`sanitize_examples.py` 不会修改真实 `.env`。
+`完整影像路径` 由 `STOREPATH`、`PATHDETAIL`、`IMAGEF` 拼接生成，仅用于查看；原始字段不会被修改。命令必须指定行数限制或使用默认 `--limit 1000`，不会无条件全表导出。

@@ -11,8 +11,6 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-from .utils.secret_redactor import redact_mapping, short_sha256
-
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
@@ -74,10 +72,6 @@ class AppConfig:
 
     def get_datasource(self, source: str) -> DataSourceConfig:
         return self.get_datasource_config(source)
-
-    def safe_config_for_display(self) -> dict[str, Any]:
-        return safe_config_for_display(self)
-
 
 def canonical_source_name(source: str) -> str:
     value = source.lower().strip()
@@ -298,49 +292,6 @@ def _parse_lis_discovery(yaml_config: dict[str, Any]) -> LisDiscoveryConfig:
 
 
 
-def safe_config_for_display(config: AppConfig) -> dict[str, Any]:
-    """Return a redacted copy of runtime config suitable for logs or support reports."""
-    datasources = {}
-    for name, datasource in config.datasources.items():
-        datasources[name] = {
-            "name": datasource.name,
-            "type": datasource.type,
-            "host": datasource.host,
-            "port": datasource.port,
-            "service_name": datasource.service_name,
-            "username": datasource.username,
-            "password": "<redacted>" if datasource.password else "",
-            "password_set": bool(datasource.password),
-            "password_digest": short_sha256(datasource.password) if datasource.password else "",
-            "mode": datasource.mode,
-            "client_lib_dir": datasource.client_lib_dir,
-            "username_env": datasource.username_env,
-            "password_env": datasource.password_env,
-        }
-    safe = {
-        "datasources": datasources,
-        "extract": {
-            "default_start_date": config.extract.default_start_date,
-            "default_end_date": config.extract.default_end_date,
-            "batch_size": config.extract.batch_size,
-            "default_max_days_without_force": config.extract.default_max_days_without_force,
-        },
-        "tables": {
-            "patient_table": config.tables.patient_table,
-            "diagnosis_table": config.tables.diagnosis_table,
-            "patient_key": config.tables.patient_key,
-            "discharge_date_field": config.tables.discharge_date_field,
-        },
-        "lis_discovery": {
-            "excluded_owners": list(config.lis_discovery.excluded_owners),
-            "table_keywords": list(config.lis_discovery.table_keywords),
-            "column_keywords": list(config.lis_discovery.column_keywords),
-        },
-        "output_dir": str(config.output_dir),
-        "log_dir": str(config.log_dir),
-    }
-    return safe
-
 def load_config() -> AppConfig:
     """Load .env and optional config.yaml into typed config objects."""
     load_dotenv(BASE_DIR / ".env")
@@ -377,6 +328,7 @@ def load_config() -> AppConfig:
         output_dir=output_dir,
         log_dir=log_dir,
     )
+
 
 
 

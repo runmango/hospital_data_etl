@@ -10,7 +10,6 @@ from typing import Any
 import pandas as pd
 
 from .config import BASE_DIR, DataSourceConfig
-from .utils.secret_redactor import redact_text, short_sha256
 
 
 class OracleClientError(RuntimeError):
@@ -31,14 +30,6 @@ _ORACLE_ERROR_HINTS = {
     "ORA-12514": "Oracle listener does not know the requested service_name.",
     "ORA-12541": "Oracle listener is not reachable or not running.",
 }
-
-
-def _mask_username(username: str) -> str:
-    if not username:
-        return "<empty>"
-    if len(username) <= 2:
-        return username[0] + "*"
-    return username[0] + "*" * (len(username) - 2) + username[-1]
 
 
 class OracleClient:
@@ -67,9 +58,7 @@ class OracleClient:
     def safe_connection_details(self) -> str:
         return (
             f"source={self.source_name}, host={self.config.host}, port={self.config.port}, "
-            f"service_name={self.config.service_name}, username={_mask_username(self.config.username)}, "
-            f"password_set={bool(self.config.password)}, "
-            f"password_digest={short_sha256(self.config.password) if self.config.password else ''}"
+            f"service_name={self.config.service_name}, username={self.config.username or '<empty>'}"
         )
 
     @staticmethod
@@ -112,11 +101,9 @@ class OracleClient:
         except Exception as exc:
             hint = self.explain_oracle_error(exc)
             raise OracleClientError(
-                redact_text(
-                    "Failed to initialize Oracle thick mode. Install Oracle Instant Client "
-                    "and set ORACLE_CLIENT_LIB_DIR to its directory, or add the client "
-                    f"directory to PATH/LD_LIBRARY_PATH. {hint} Original error: {exc}"
-                )
+                "Failed to initialize Oracle thick mode. Install Oracle Instant Client "
+                "and set ORACLE_CLIENT_LIB_DIR to its directory, or add the client "
+                f"directory to PATH/LD_LIBRARY_PATH. {hint} Original error: {exc}"
             ) from exc
 
     def connect(self):
@@ -163,10 +150,8 @@ class OracleClient:
             if self.config.mode == "thin" and "DPY-3010" in str(exc):
                 hint = _ORACLE_ERROR_HINTS["DPY-3010"]
             raise OracleClientError(
-                redact_text(
-                    f"Failed to connect to Oracle datasource {self.datasource_info} "
-                    f"({self.safe_connection_details}). {hint} Original error: {exc}"
-                )
+                f"Failed to connect to Oracle datasource {self.datasource_info} "
+                f"({self.safe_connection_details}). {hint} Original error: {exc}"
             ) from exc
 
     def close(self) -> None:
@@ -189,7 +174,7 @@ class OracleClient:
             return pd.read_sql_query(sql, con=connection, params=params or {})
         except Exception as exc:
             hint = self.explain_oracle_error(exc)
-            raise OracleClientError(redact_text(f"Oracle query failed. {hint} Original error: {exc}")) from exc
+            raise OracleClientError(f"Oracle query failed. {hint} Original error: {exc}") from exc
 
     def query_sql_file(
         self,

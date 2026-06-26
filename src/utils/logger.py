@@ -1,18 +1,25 @@
-﻿"""Logging setup with automatic sensitive value redaction."""
+﻿"""Logging setup with simple sensitive value filtering."""
 
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
-from .secret_redactor import redact_text
-
 
 class SensitiveDataFilter(logging.Filter):
+    _patterns = [
+        re.compile(r"(?i)(password\s*[=:]\s*)[^\s,;]+"),
+        re.compile(r"(?i)(pwd\s*[=:]\s*)[^\s,;]+"),
+        re.compile(r"(?i)([A-Z0-9_]*PASSWORD\s*[=:]\s*)[^\s,;]+"),
+    ]
+
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
-        record.msg = redact_text(message)
+        for pattern in self._patterns:
+            message = pattern.sub(r"\1******", message)
+        record.msg = message
         record.args = ()
         return True
 
